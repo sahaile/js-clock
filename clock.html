@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>JS Lab</title>
+        <meta charset="utf-8">
+        <link href='https://fonts.googleapis.com/css?family=Orbitron' rel='stylesheet' type='text/css'>
+        <style>
+            body {
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+                font-family: 'Orbitron', sans-serif;
+            }
+
+             .clockGroup {
+                display: flex;
+                width: 100vw;
+                height: 100vh;
+                flex-wrap: wrap;
+            }
+
+            .clock,
+            .timer,
+            .stopwatch,
+            .countdown {
+                width: 50%;
+                height:50%;
+                text-align: center;     
+            }
+
+            .clock {
+                background-color: black;
+                color: white;
+                align-items: center; 
+            }
+
+            .clock p{
+                width:80%;
+                font-size: 5em;
+                position: relative; 
+                display: flex;
+                flex-direction: column;
+                align-items: center; 
+                padding-top: 1em;
+                text-align: center;
+                margin: 0 auto;      
+            }
+
+
+            .timer {
+                background-color: #fee8e8;
+                color: black;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #timerDisplay{
+                font-size: 2em;
+                margin: 0 0 0.5em 0;
+            }
+            
+            .timer h4 {
+                margin: 0em 0 1em 0;
+            }
+
+            #timerProgress {
+                width: 50%;
+                height: 30px;
+                background-color: grey;
+                border-radius: 15px;
+                margin: 40px auto 0;
+                overflow: hidden;
+            }
+
+            #timerBar {
+                width: 0%;
+                height: 100%;
+                background-color: red;
+                border-radius: 15px 0 0 15px;
+            }
+
+            .timer label {
+                font-weight: bold;
+            }
+
+            .timer input[type="number"] {
+                width: 60px;
+                padding: 0.3em;
+                margin: 0 1em 1em 0;
+                border-radius: 6px;
+                border: 1px solid #ccc;
+                font-size: 1em;
+                text-align: center;
+            }
+
+            .timerButtons {
+                margin-top: 1em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.8em;
+            }
+
+            .timerButtons label {
+                font-weight: bold;
+            }
+
+            .timerButtons input[type="checkbox"] {
+                transform: scale(1.5);
+            }
+
+            .timerButtons button {
+                padding: 0.6em;
+                border-radius: 4px;
+                border: none;
+                background-color: #f44336;
+                color: white;
+                font-weight: bold;
+            }
+
+            .stopwatch {
+                background-color: #121212;
+                color: #00ffcc;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #stopwatchDisplay {
+                font-size: 5em;
+                margin: 0.5em 0 1em 0;
+            }
+
+            .stopwatchButtons button {
+                background-color: #313131;
+                border: 2px solid #00ffcc;
+                color: #00ffcc;
+                padding: 0.5em 1.5em;
+                margin: 0 0.5em;
+                border-radius: 10px;
+                font-size: 1em;
+                transition: background 0.3s, transform 0.2s;
+            }
+
+            .stopwatchButtons button:hover:not(:disabled) {
+                background: #00ffcc;
+                color: #121212;
+            }
+
+            .stopwatchButtons button:disabled {
+                opacity: 0.5;
+            }
+
+            .countdown {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .countdown h2 {
+                margin-bottom: 3em;
+            }
+
+            .countdown label {
+                font-weight: bold;
+                margin-bottom: 0.5em;
+            }
+
+            #countdownInput {
+                font-size: 1em;
+                padding: 0.4em;
+                border-radius: 6px;
+                border: 1px solid #ccc;
+                margin-bottom: 1em;
+            }
+
+            #countdownDisplay {
+                font-size: 1.5em;
+                margin: 1em 0;
+            }
+
+            #countdownComplete {
+                margin-top: -2em;
+                font-size: 1.4em;
+                color: goldenrod;
+                font-weight: bold;
+                animation: flash 1s infinite;
+            }
+
+            /*https://stackoverflow.com/questions/16344354/how-to-make-blinking-flashing-text-with-css-3 */
+            @keyframes flash {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0; }
+            }
+
+
+        </style>
+        <script>
+            'use strict';
+
+            class Ticker {
+                static instance = null;
+
+                constructor() {
+                    if (Ticker.instance) {
+                        throw new Error("Ticker instance already exists.");
+                    }
+                    this.observers = [];
+                    this.tick();
+                    Ticker.instance = this;
+                    this.isTicking = false;
+                }
+
+                //https://medium.com/@stheodorejohn/exploring-javascript-design-patterns-c257aa261550
+                static getInstance() {
+                    if (!Ticker.instance) {
+                        Ticker.instance = new Ticker();
+                    }
+                    return Ticker.instance;
+                }
+
+                addObserver(observer) {
+                    this.observers.push(observer);
+                }
+
+                notify() {
+                    for (const observer of this.observers) {
+                        observer.update();
+                    }
+                }
+
+                tick() {
+                    if (this.isTicking === true){
+                        return;
+                    }
+                    this.isTicking = true;
+                    this.notify();  
+                    setTimeout(() => {
+                        this.isTicking = false;  
+                        this.tick();             
+                    }, 1000);
+                }
+            }
+
+            class Clock {
+                constructor(){
+                    this.clock = document.getElementById('clockDisplay');
+                }
+
+                update() {
+                    const date = new Date();
+                    const time = date.toLocaleTimeString();
+                    this.clock.textContent = time;
+                }
+            }
+
+            class Timer {
+                constructor(){
+                    this.timerDisplay = document.getElementById('timerDisplay');
+                    this.timerStatus = document.getElementById('timerStatus');
+                    this.checkbox = document.getElementById('timerRunCheckbox');
+                    this.checkboxLabel = document.getElementById('checkboxLabel');
+                    this.restartButton = document.getElementById('timerRestartButton');
+                    this.minutesInput = document.getElementById('minutesInput');
+                    this.secondsInput = document.getElementById('secondsInput');
+                    this.progressBar = document.getElementById('timerBar');
+                    
+                    this.running = false;
+                    this.timeLeft = 0;
+                    this.initialTime = 0;
+
+                    this.checkbox.addEventListener('change', () => this.runTimer());
+                    this.restartButton.addEventListener('click', () => this.restart());
+                }
+
+                runTimer() {
+                    if (this.checkbox.checked) {
+                        if (this.timeLeft === 0) {
+                            const mins = parseInt(this.minutesInput.value) || 0;
+                            const secs = parseInt(this.secondsInput.value) || 0;
+
+                            if (secs > 59) {
+                                alert("Seconds must be between 0 - 59");
+                                this.checkbox.checked = false;
+                                return;
+                            }
+
+                            this.timeLeft = mins * 60 + secs;
+                            this.initialTime = this.timeLeft;
+                        }
+
+                        if (this.timeLeft > 0) {
+                            this.running = true;
+                            this.timerStatus.hidden = true;
+                            this.checkboxLabel.textContent = 'Stop:'
+                            this.minutesInput.disabled = true;
+                            this.secondsInput.disabled = true;
+                        } else {
+                            alert("Please enter a time greater than zero");
+                            this.checkbox.checked = false;
+                            this.running = false;
+                            this.timeLeft = 0;
+                            this.initialTime = 0;
+
+                        }
+                    } else {
+                        this.running = false;
+                        this.checkboxLabel.textContent = 'Start:'
+                        this.timerStatus.hidden = false;
+                        this.timerStatus.textContent = 'Timer Stopped!'
+                    }
+                }
+
+                restart() {
+                    this.running = false;
+                    this.checkbox.checked = false;
+                    this.checkboxLabel.textContent = 'Start:'
+                    this.timeLeft = 0;
+                    this.initialTime = 0;
+                    this.minutesInput.value = 0;
+                    this.secondsInput.value = 0;
+                    this.minutesInput.disabled = false;
+                    this.secondsInput.disabled = false;
+                    this.updateDisplay(0);
+                    this.timerStatus.hidden = false;
+                    this.timerStatus.textContent = 'Timer Restarted!'
+                    this.progressBar.style.width = 0 + '%';
+                }
+
+
+                updateDisplay(totalSeconds) {
+                    const mins = Math.floor(totalSeconds / 60);
+                    const secs = totalSeconds % 60;
+
+                    this.timerDisplay.textContent = String(mins).padStart(2, '0') + ":" + String(secs).padStart(2, '0');
+                    const percent = 100 - ((this.timeLeft / this.initialTime) * 100);
+                    this.progressBar.style.width = percent + '%';
+
+                    if (this.timeLeft === 0 && this.running){
+                        this.timerStatus.hidden = false;
+                        this.timerStatus.textContent =  "Time's Up!";
+                        this.running = false;
+                        this.timeLeft = 0;
+                        this.initialTime = 0;
+                        this.checkboxLabel.textContent = 'Start:'
+                    }
+
+
+                }
+
+                update() {
+                    if (this.running) {
+                        if (this.timeLeft > 0) {
+                            this.timeLeft--;
+                            this.updateDisplay(this.timeLeft);
+
+                            if (this.timeLeft === 0) {
+                                this.running = false;
+                                this.checkbox.checked = false;
+                                this.minutesInput.disabled = false;
+                                this.secondsInput.disabled = false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            class Countdown {
+                constructor(){
+                    this.countdownDisplay = document.getElementById('countdownDisplay');
+                    this.countdownInput = document.getElementById('countdownInput');
+                    this.countdownComplete = document.getElementById('countdownComplete');
+
+                    this.countdownInput.addEventListener('change', () => this.startCountdown());
+
+                    this.dateFilled = false;
+                    this.countdownDate = null;
+                    this.complete = null;
+                }
+
+                startCountdown() {
+                    this.countdownDate = new Date(this.countdownInput.value);
+                    this.dateFilled = true;
+                    this.countdownComplete.hidden = true;
+                    this.complete = false;
+                }
+
+                update(){
+                    if (this.dateFilled && this.countdownDate && this.complete !== true) {
+                        const currentDate = new Date();
+                        const countdownDiff = this.countdownDate - currentDate;
+
+                        //https://www.w3schools.com/howto/howto_js_countdown.asp
+                        //used for time conversions
+                        if(Math.floor(countdownDiff / 1000) === 0){
+                            console.log("complete")
+                            const totalSeconds = Math.floor(Math.abs(countdownDiff) / 1000);
+                            const years = Math.floor(totalSeconds / (365 * 24 * 60 * 60));
+                            const months = Math.floor((totalSeconds % (365 * 24 * 60 * 60)) / (30 * 24 * 60 * 60));
+                            const days = Math.floor((totalSeconds % (30 * 24 * 60 * 60)) / (24 * 60 * 60));
+                            const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+                            const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+                            const seconds = totalSeconds % 60;
+                            this.countdownDisplay.textContent =
+                                `${years} years ${months} months ${days} days ${hours} hours ${minutes} mintues ${seconds} seconds ago`;
+                            this.countdownComplete.hidden = false;
+                            this.complete = true;
+
+                        }
+                        else if (countdownDiff > 0){
+                            const totalSeconds = Math.floor(countdownDiff / 1000);
+                            const years = Math.floor(totalSeconds / (365 * 24 * 60 * 60));
+                            const months = Math.floor((totalSeconds % (365 * 24 * 60 * 60)) / (30 * 24 * 60 * 60));
+                            const days = Math.floor((totalSeconds % (30 * 24 * 60 * 60)) / (24 * 60 * 60));
+                            const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+                            const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+                            const seconds = totalSeconds % 60;
+
+                            this.countdownDisplay.textContent =
+                                `${years} years ${months} months ${days} days ${hours} hours ${minutes} mintues ${seconds} seconds remaining`;
+
+                            this.countdownComplete.hidden = true;
+
+                        }
+                        else if (countdownDiff < 0 ){
+                            const totalSeconds = Math.floor(Math.abs(countdownDiff) / 1000);
+                            const years = Math.floor(totalSeconds / (365 * 24 * 60 * 60));
+                            const months = Math.floor((totalSeconds % (365 * 24 * 60 * 60)) / (30 * 24 * 60 * 60));
+                            const days = Math.floor((totalSeconds % (30 * 24 * 60 * 60)) / (24 * 60 * 60));
+                            const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+                            const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+                            const seconds = totalSeconds % 60;
+
+                            this.countdownDisplay.textContent =
+                                `${years} years ${months} months ${days} days ${hours} hours ${minutes} mintues ${seconds} seconds ago`;
+                            
+                            this.countdownComplete.hidden = true;
+
+                        }
+                    }
+                }
+                
+            }
+
+            class Stopwatch {
+                constructor(){
+                    this.stopwatchDisplay = document.getElementById('stopwatchDisplay');
+                    this.startButton = document.getElementById('stopwatchStartButton');
+                    this.stopButton = document.getElementById('stopwatchStopButton');
+                    this.resetButton = document.getElementById('stopwatchResetButton');
+                    
+                    this.running = false;
+                    this.startTime = null;
+                    this.elapsed = 0;
+
+                    this.startButton.addEventListener('click', () => this.start());
+                    this.stopButton.addEventListener('click', () => this.stop());
+                    this.resetButton.addEventListener('click', () => this.reset());
+                }
+
+                start() {
+                    if (!this.running) {
+                        this.running = true;
+                        this.startTime = new Date().getTime() - this.elapsed;
+                        this.stopButton.disabled = false;
+                        this.startButton.disabled = true;
+                    }
+                }
+
+                stop() {
+                    if (this.running) {
+                        this.running = false;
+                        this.elapsed = new Date().getTime() - this.startTime;
+                        this.stopButton.disabled = true;
+                        this.startButton.disabled = false;
+                    }
+                }
+
+                reset() {
+                    this.running = false;
+                    this.elapsed = 0;
+                    this.startTime = null;
+                    this.updateDisplay(0);
+                    this.stopButton.disabled = true;
+                    this.startButton.disabled = false;
+                }
+
+                updateDisplay(elapsedMilliseconds) {
+                    const totalElapsedMilliseconds = Math.floor(elapsedMilliseconds);
+                    const totalSeconds = Math.floor(totalElapsedMilliseconds / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    const milliseconds = totalElapsedMilliseconds % 1000;
+
+                    this.stopwatchDisplay.textContent =
+                        `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+                }
+                update() {
+                    if (this.running) {
+                        this.elapsed = new Date().getTime() - this.startTime;
+                        this.updateDisplay(this.elapsed);
+                    }
+                }
+            }
+
+            function main() {
+                const ticker = Ticker.getInstance();         
+                const clock = new Clock();
+                const timer = new Timer();
+                const stopwatch = new Stopwatch();
+                const countdown = new Countdown();
+                ticker.addObserver(clock);  
+                ticker.addObserver(timer);  
+                ticker.addObserver(stopwatch);                            
+                ticker.addObserver(countdown);                           
+            }
+
+            window.addEventListener('load', main);
+        </script>
+
+    </head>
+<body>
+    <section class="clockGroup">
+
+        <!-- Clock -->
+        <section class="clock">
+            <h2>Clock</h2>
+            <p id="clockDisplay"></p>
+        </section>
+
+        <!-- Timer -->
+        <section class="timer">
+            <h2>Timer</h2>
+            <h3 id="timerDisplay">00:00</h3>
+            <h4 id="timerStatus" hidden>Timer complete!</h4>
+
+            <section class="timerInputs">
+                <label >Minutes:</label>
+                <input type="number" id="minutesInput" min="0" value="0">
+
+                <label >Seconds:</label>
+                <input type="number" id="secondsInput" min="0" max="59" value="0">        
+            </section>
+        
+            <section class="timerButtons">
+                <label id="checkboxLabel">Start:</label>
+                <input type="checkbox" id="timerRunCheckbox" name="timerRunCheckbox" value="Start">
+                <button id="timerRestartButton">Restart</button>
+            </section>
+
+            <section id="timerProgress">
+                <section id="timerBar"></section>
+            </section>
+        </section>
+
+        <!-- Stopwatch -->
+        <section class="stopwatch">
+            <h2>Stopwatch</h2>
+            <label id="stopwatchDisplayLabel">Elapsed Time:</label>
+            <h3 id="stopwatchDisplay">0:00:00.000</h3>
+            <section class="stopwatchButtons">
+                <button id="stopwatchStartButton">Start</button>
+                <button id="stopwatchStopButton" disabled>Stop</button>
+                <button id="stopwatchResetButton">Reset</button>
+            </section>
+        </section>
+
+        <!-- Countdown -->
+        <section class="countdown">
+            <h2>Countdown</h2>
+            <p id="countdownComplete" hidden>Countdown complete!</p>
+            <p id="countdownDisplay">Waiting for date...</p>
+            <label >Select date & time:</label>
+            <input type="datetime-local" id="countdownInput">
+        </section>
+    </section>
+
+</body>
+</html>
