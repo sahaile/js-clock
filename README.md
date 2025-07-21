@@ -5,7 +5,7 @@ Each tool is displayed in its own section and updates in real-time using a share
 
 ## 🚀 Live Demo
 
-🔗 [View it on GitHub Pages](https://sahaile.github.io/gauge-financial/)
+🔗 [View it on GitHub Pages](https://sahaile.github.io/js-clock/)
 
 ---
 
